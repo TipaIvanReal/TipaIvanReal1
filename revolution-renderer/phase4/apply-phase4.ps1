@@ -85,113 +85,10 @@ $global = Replace-Required $global $oldGlobal $newGlobal "GlobalData terrain lig
 Set-Content $globalPath $global -Encoding UTF8
 
 # ---------------------------------------------------------------------------
-# Object lighting: matching cinematic key/fill ratio and a real specular term.
+# Object lighting stays on the known-good Phase 3 path in this hotfix.
+# The first Phase 4 prototype touched render state during time-of-day setup,
+# which can run before the render device is fully ready on some installations.
 # ---------------------------------------------------------------------------
-$displayPath = Join-Path $root "GeneralsMD\Code\GameEngineDevice\Source\W3DDevice\GameClient\W3DDisplay.cpp"
-$display = Get-Content $displayPath -Raw
-
-$oldDisplay = @'
-void W3DDisplay::setTimeOfDay( TimeOfDay tod )
-{
-	const GlobalData::TerrainLighting *ol=&TheGlobalData->m_terrainObjectsLighting[tod][0];
-
-	if( m_3DScene )
-	{
-		m_3DScene->Set_Ambient_Light( Vector3(ol->ambient.red, ol->ambient.green, ol->ambient.blue) );
-	}
-
-	for (Int i=0; i<LightEnvironmentClass::MAX_LIGHTS; i++)
-	{
-		if( m_myLight[i] )
-		{
-			ol=&TheGlobalData->m_terrainObjectsLighting[tod][i];
-
-			m_myLight[i]->Set_Ambient( Vector3( 0.0f, 0.0f, 0.0f ) );
-			m_myLight[i]->Set_Diffuse( Vector3(ol->diffuse.red, ol->diffuse.green, ol->diffuse.blue ) );
-			m_myLight[i]->Set_Specular( Vector3(0,0,0) );
-			Matrix3D mtx;
-			mtx.Set(Vector3(1,0,0), Vector3(0,1,0), Vector3(ol->lightPos.x, ol->lightPos.y, ol->lightPos.z), Vector3(0,0,0));
-			m_myLight[i]->Set_Transform(mtx);
-		}
-	}
-	if(TheTerrainRenderObject) {
-		TheTerrainRenderObject->setTimeOfDay(tod);
-		TheTacticalView->forceRedraw();
-	}
-}
-'@
-
-$newDisplay = @'
-void W3DDisplay::setTimeOfDay( TimeOfDay tod )
-{
-	const GlobalData::TerrainLighting *ol=&TheGlobalData->m_terrainObjectsLighting[tod][0];
-
-	Real ambientScale = 0.72f;
-	Real diffuseScale = 1.28f;
-	Vector3 sunTint(1.05f, 1.00f, 0.94f);
-
-	if (tod == TIME_OF_DAY_MORNING)
-	{
-		ambientScale = 0.76f;
-		diffuseScale = 1.22f;
-		sunTint.Set(1.08f, 1.01f, 0.91f);
-	}
-	else if (tod == TIME_OF_DAY_EVENING)
-	{
-		ambientScale = 0.70f;
-		diffuseScale = 1.20f;
-		sunTint.Set(1.10f, 0.98f, 0.88f);
-	}
-	else if (tod == TIME_OF_DAY_NIGHT)
-	{
-		ambientScale = 0.88f;
-		diffuseScale = 1.08f;
-		sunTint.Set(0.88f, 0.96f, 1.12f);
-	}
-
-	if( m_3DScene )
-	{
-		Vector3 ambient(
-			ol->ambient.red * ambientScale,
-			ol->ambient.green * ambientScale,
-			ol->ambient.blue * ambientScale);
-		ambient.Cap_Absolute_To(Vector3(1.0f, 1.0f, 1.0f));
-		m_3DScene->Set_Ambient_Light(ambient);
-	}
-
-	for (Int i=0; i<LightEnvironmentClass::MAX_LIGHTS; i++)
-	{
-		if( m_myLight[i] )
-		{
-			ol=&TheGlobalData->m_terrainObjectsLighting[tod][i];
-
-			Vector3 diffuse(
-				ol->diffuse.red * diffuseScale * sunTint.X,
-				ol->diffuse.green * diffuseScale * sunTint.Y,
-				ol->diffuse.blue * diffuseScale * sunTint.Z);
-			diffuse.Cap_Absolute_To(Vector3(1.0f, 1.0f, 1.0f));
-
-			m_myLight[i]->Set_Ambient( Vector3( 0.0f, 0.0f, 0.0f ) );
-			m_myLight[i]->Set_Diffuse(diffuse);
-			m_myLight[i]->Set_Specular(diffuse * 0.22f);
-
-			Matrix3D mtx;
-			mtx.Set(Vector3(1,0,0), Vector3(0,1,0), Vector3(ol->lightPos.x, ol->lightPos.y, ol->lightPos.z), Vector3(0,0,0));
-			m_myLight[i]->Set_Transform(mtx);
-		}
-	}
-
-	DX8Wrapper::Set_DX8_Render_State(D3DRS_SPECULARENABLE, TRUE);
-
-	if(TheTerrainRenderObject) {
-		TheTerrainRenderObject->setTimeOfDay(tod);
-		TheTacticalView->forceRedraw();
-	}
-}
-'@
-
-$display = Replace-Required $display $oldDisplay $newDisplay "W3DDisplay object lighting"
-Set-Content $displayPath $display -Encoding UTF8
 
 # ---------------------------------------------------------------------------
 # Shadows: stronger, cooler contact contrast. Projected decals get linear filtering.
@@ -232,4 +129,4 @@ $water = Replace-Required $water "m_meshVertexMaterialClass->Set_Shininess(20.0)
 $water = Replace-Required $water "m_meshVertexMaterialClass->Set_Specular(0.5,0.5,0.5);" "m_meshVertexMaterialClass->Set_Specular(0.9,0.9,0.9);" "water specular"
 Set-Content $waterPath $water -Encoding UTF8
 
-Write-Host "Revolution renderer Phase 4 lighting/shadows/water patch applied."
+Write-Host "Revolution renderer Phase 4.1 safe lighting/shadows/water patch applied."
