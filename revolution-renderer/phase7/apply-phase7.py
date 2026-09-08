@@ -244,7 +244,7 @@ pattern = re.compile(
 )
 if not pattern.search(world):
     raise RuntimeError("Phase 7 patch point not found: readTexClass")
-world = pattern.sub(new_read, world, count=1)
+world = pattern.sub(lambda _match: new_read, world, count=1)
 
 world = replace_required(
     world,
@@ -375,7 +375,7 @@ fn_pattern = re.compile(
 )
 if not fn_pattern.search(height):
     raise RuntimeError("Phase 7 patch point not found: RevolutionSetTerrainMaterial")
-height = fn_pattern.sub(new_material_fn, height, count=1)
+height = fn_pattern.sub(lambda _match: new_material_fn, height, count=1)
 
 height = replace_required(
     height,
