@@ -1,0 +1,93 @@
+name: Build Revolution standalone engine
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout build repository
+        uses: actions/checkout@v4
+
+      - name: Clone GeneralsGameCode
+        shell: pwsh
+        run: |
+          git clone --recursive https://github.com/TheSuperHackers/GeneralsGameCode.git engine
+
+      - name: Setup MSVC x86
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86
+
+      - name: Configure
+        working-directory: engine
+        shell: pwsh
+        run: cmake --preset win32
+
+      - name: Build Release
+        working-directory: engine
+        shell: pwsh
+        run: cmake --build build/win32 --config Release --parallel
+
+      - name: Package standalone executable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package | Out-Null
+
+          $zh = Get-ChildItem -Path engine/build/win32 -Recurse -File -Filter generalszh.exe |
+            Select-Object -First 1
+
+          if (-not $zh) {
+            Write-Error "generalszh.exe was not produced by the build."
+            exit 1
+          }
+
+          Copy-Item $zh.FullName -Destination package/generalszh.exe -Force
+
+          @"
+          Revolution Project - standalone Zero Hour engine
+          
+          File: generalszh.exe
+          Build source: TheSuperHackers/GeneralsGameCode
+          Target: Windows x86 / Zero Hour
+          
+          This is the baseline standalone executable used before the Direct3D 12 renderer work.
+          Put it in the Zero Hour game directory when testing manually.
+          "@ | Set-Content -Path package/README.txt -Encoding UTF8
+
+          $hash = (Get-FileHash package/generalszh.exe -Algorithm SHA256).Hash
+          "SHA256  generalszh.exe  $hash" | Set-Content package/SHA256.txt -Encoding ASCII
+
+          Compress-Archive -Path package/* -DestinationPath RevolutionProject-generalszh.zip -Force
+
+          Get-Item package/generalszh.exe, RevolutionProject-generalszh.zip | Format-Table Name,Length
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RevolutionProject-generalszh
+          path: RevolutionProject-generalszh.zip
+          if-no-files-found: error
+
+      - name: Publish stable release asset
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "revolution-standalone-latest"
+          $asset = "RevolutionProject-generalszh.zip"
+
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag $asset --target "${{ github.sha }}" --title "Revolution Project standalone engine" --notes "Baseline standalone generalszh.exe. This build still uses the existing renderer; Direct3D 12 work will build on top of this executable."
+          } else {
+            gh release upload $tag $asset --clobber
+          }
