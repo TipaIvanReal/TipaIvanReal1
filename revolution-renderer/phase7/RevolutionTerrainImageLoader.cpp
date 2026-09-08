@@ -13,6 +13,7 @@
 #include "Common/FileSystem.h"
 #include "Common/file.h"
 #include "W3DDevice/GameClient/TileData.h"
+#include "W3DDevice/GameClient/WorldHeightMap.h"
 
 namespace
 {
