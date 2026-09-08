@@ -32,7 +32,7 @@ jobs:
         shell: pwsh
         run: .\revolution-renderer\phase1\apply-phase1.ps1
 
-      - name: Apply Revolution renderer Phase 6
+      - name: Apply Revolution renderer Phase 6.3
         shell: pwsh
         run: .\revolution-renderer\phase6\apply-phase6.ps1
 
@@ -67,7 +67,7 @@ jobs:
           Copy-Item $zh.FullName -Destination package/generalszh_revolution.exe -Force
 
           @"
-          Revolution Project Modern Renderer - Phase 6
+          Revolution Project Modern Renderer - Phase 6.3
 
           Run: generalszh_revolution.exe
 
@@ -88,16 +88,16 @@ jobs:
           $hash = (Get-FileHash package/generalszh_revolution.exe -Algorithm SHA256).Hash
           "SHA256  generalszh_revolution.exe  $hash" | Set-Content package/SHA256.txt -Encoding ASCII
 
-          Compress-Archive -Path package/* -DestinationPath RevolutionProject-ModernRenderer-Phase6.zip -Force
+          Compress-Archive -Path package/* -DestinationPath RevolutionProject-ModernRenderer-Phase6_3.zip -Force
 
-          Get-Item package/generalszh_revolution.exe, RevolutionProject-ModernRenderer-Phase6.zip |
+          Get-Item package/generalszh_revolution.exe, RevolutionProject-ModernRenderer-Phase6_3.zip |
             Format-Table Name,Length
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RevolutionProject-ModernRenderer-Phase6
-          path: RevolutionProject-ModernRenderer-Phase6.zip
+          name: RevolutionProject-ModernRenderer-Phase6_3
+          path: RevolutionProject-ModernRenderer-Phase6_3.zip
           if-no-files-found: error
 
       - name: Publish preview release
@@ -105,12 +105,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "revolution-renderer-phase6"
-          $asset = "RevolutionProject-ModernRenderer-Phase6.zip"
+          $tag = "revolution-renderer-phase6_3"
+          $asset = "RevolutionProject-ModernRenderer-Phase6_3.zip"
 
           gh release view $tag *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag $asset --target "${{ github.sha }}" --title "Revolution Modern Renderer - Phase 6" --notes "Playable terrain-shader bridge build: the terrain now uses a programmable material path with procedural relief at the real HeightMap draw call. Native D3D12 scene rendering is still being migrated."
+            gh release create $tag $asset --target "${{ github.sha }}" --title "Revolution Modern Renderer - Phase 6.3" --notes "Playable terrain-shader bridge build: the terrain now uses a programmable material path with procedural relief at the real HeightMap draw call. Native D3D12 scene rendering is still being migrated."
           } else {
             gh release upload $tag $asset --clobber
           }
