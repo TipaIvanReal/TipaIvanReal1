@@ -42,7 +42,7 @@ jobs:
 
       - name: Apply Revolution renderer Phase 4.1
         shell: pwsh
-        run: .\revolution-renderer\phase4_1\apply-phase4_1.ps1
+        run: .\revolution-renderer\phase4\apply-phase4.ps1
 
       - name: Setup MSVC x86
         uses: ilammy/msvc-dev-cmd@v1
