@@ -41,6 +41,7 @@ static ShaderClass detailOpaqueShader(SC_DETAIL_BLEND);
 static DWORD g_revolutionTerrainPS = 0;
 static IDirect3DDevice8 *g_revolutionTerrainPSDevice = nullptr;
 static Bool g_revolutionTerrainLogged = FALSE;
+static Bool g_revolutionTerrainAssemblyFailed = FALSE;
 
 static void RevolutionTerrainLog(const char *message)
 {
@@ -56,6 +57,8 @@ static Bool RevolutionEnsureTerrainPixelShader()
 {
 	IDirect3DDevice8 *dev = DX8Wrapper::_Get_D3D_Device8();
 	if (!dev)
+		return FALSE;
+	if (g_revolutionTerrainAssemblyFailed)
 		return FALSE;
 
 	if (g_revolutionTerrainPS && g_revolutionTerrainPSDevice == dev)
@@ -73,10 +76,10 @@ static Bool RevolutionEnsureTerrainPixelShader()
 		"tex t0\n"
 		"tex t1\n"
 		"tex t2\n"
-		"dp3 r1, t1, c0\n"
-		"dp3 r2, t2, c0\n"
-		"sub r1, r1, r2\n"
-		"mad_sat r1, r1, c1, c2\n"
+		"dp3 r0.rgb, t1, c0\n"
+		"dp3 r1.rgb, t2, c0\n"
+		"sub r1.rgb, r0, r1\n"
+		"mad_sat r1.rgb, r1, c1, c2\n"
 		"mul r0, t0, r1\n"
 		"mul r0, r0, v0\n"
 		"mul_sat r0.rgb, r0, c3\n"
@@ -96,6 +99,7 @@ static Bool RevolutionEnsureTerrainPixelShader()
 		if (code)
 			code->Release();
 		RevolutionTerrainLog("assembly failed");
+		g_revolutionTerrainAssemblyFailed = TRUE;
 		return FALSE;
 	}
 
