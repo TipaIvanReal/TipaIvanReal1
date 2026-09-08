@@ -32,9 +32,13 @@ jobs:
         shell: pwsh
         run: .\revolution-renderer\phase1\apply-phase1.ps1
 
-      - name: Apply Revolution renderer Phase 6.4
+      - name: Apply Revolution renderer Phase 7
         shell: pwsh
         run: .\revolution-renderer\phase6\apply-phase6.ps1
+
+      - name: Apply Revolution renderer Phase 7
+        shell: pwsh
+        run: python .\revolution-renderer\phase7\apply-phase7.py
 
       - name: Setup MSVC x86
         uses: ilammy/msvc-dev-cmd@v1
@@ -67,17 +71,20 @@ jobs:
           Copy-Item $zh.FullName -Destination package/generalszh_revolution.exe -Force
 
           @"
-          Revolution Project Modern Renderer - Phase 6.4
+          Revolution Project Modern Renderer - Phase 7
 
           Run: generalszh_revolution.exe
 
           IMPORTANT:
           Keep third-party d3d8.dll hooks disabled while testing this build.
 
-          Phase 1 + 6:
+          Phase 1 + 6 + 7:
           - Direct3D 12 capability/device probe remains available.
           - Terrain rendering now installs a programmable material shader at the actual HeightMap draw call.
-          - The terrain shader now preserves Generals' native two-UV atlas blend instead of sampling across atlas cells.
+          - Terrain diffuse sources now accept high-resolution TGA or PNG without disappearing.
+          - Companion maps are auto-discovered by base texture name: _N normal, _H height, _R roughness.
+          - _N and _H are combined into the terrain normal response; _R is packed into the material atlas for the next specular/PBR stage.
+          - The terrain shader preserves Generals' native two-UV atlas blend.
           - Original per-vertex terrain lighting is preserved inside the programmable pass.
           - Terrain filtering remains anisotropic 16x.
           - This build intentionally skips the old Phase 2-5 post-process/lighting experiments.
@@ -88,16 +95,16 @@ jobs:
           $hash = (Get-FileHash package/generalszh_revolution.exe -Algorithm SHA256).Hash
           "SHA256  generalszh_revolution.exe  $hash" | Set-Content package/SHA256.txt -Encoding ASCII
 
-          Compress-Archive -Path package/* -DestinationPath RevolutionProject-ModernRenderer-Phase6_4.zip -Force
+          Compress-Archive -Path package/* -DestinationPath RevolutionProject-ModernRenderer-Phase7.zip -Force
 
-          Get-Item package/generalszh_revolution.exe, RevolutionProject-ModernRenderer-Phase6_4.zip |
+          Get-Item package/generalszh_revolution.exe, RevolutionProject-ModernRenderer-Phase7.zip |
             Format-Table Name,Length
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RevolutionProject-ModernRenderer-Phase6_4
-          path: RevolutionProject-ModernRenderer-Phase6_4.zip
+          name: RevolutionProject-ModernRenderer-Phase7
+          path: RevolutionProject-ModernRenderer-Phase7.zip
           if-no-files-found: error
 
       - name: Publish preview release
@@ -105,12 +112,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "revolution-renderer-phase6_4"
-          $asset = "RevolutionProject-ModernRenderer-Phase6_4.zip"
+          $tag = "revolution-renderer-phase7"
+          $asset = "RevolutionProject-ModernRenderer-Phase7.zip"
 
           gh release view $tag *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag $asset --target "${{ github.sha }}" --title "Revolution Modern Renderer - Phase 6.4" --notes "Playable terrain-shader bridge build with corrected two-UV terrain atlas blending. Native D3D12 scene rendering is still being migrated."
+            gh release create $tag $asset --target "${{ github.sha }}" --title "Revolution Modern Renderer - Phase 7" --notes "Terrain material bridge build with PNG/TGA source loading and automatic _N/_H/_R companion maps. Native DX12 full-resolution terrain sampling is still being migrated."
           } else {
             gh release upload $tag $asset --clobber
           }
