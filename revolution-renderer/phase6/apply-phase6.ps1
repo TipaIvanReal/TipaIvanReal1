@@ -196,7 +196,7 @@ $oldSelect = @'
 '@
 
 $newSelect = @'
- 		Bool revolutionTerrainMaterial =
+ 		revolutionTerrainMaterial =
  			!ShaderClass::Is_Backface_Culling_Inverted() &&
  			!m_disableTextures &&
  			RevolutionEnsureTerrainPixelShader();
@@ -209,7 +209,10 @@ $newSelect = @'
  		//Specify all textures that this shader may need.
 '@
 
-$scopeOld = @"\n\tBool doMultiPassWireFrame=FALSE;\n"@\n$scopeNew = @"\n\tBool doMultiPassWireFrame=FALSE;\n\tBool revolutionTerrainMaterial=FALSE;\n"@\n$height = Replace-Required $height $scopeOld $scopeNew "terrain material scope"\n\n$height = Replace-Required $height $oldSelect $newSelect "terrain pass selection"\n
+$height = Replace-Required $height "`tBool doMultiPassWireFrame=FALSE;" "`tBool doMultiPassWireFrame=FALSE;`r`n`tBool revolutionTerrainMaterial=FALSE;" "terrain material scope"
+
+$height = Replace-Required $height $oldSelect $newSelect "terrain pass selection"
+
 $oldPass = @'
  			if (m_disableTextures ) {
  				DX8Wrapper::Set_Shader(ShaderClass::_PresetOpaque2DShader);
