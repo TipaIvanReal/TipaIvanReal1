@@ -45,7 +45,7 @@ jobs:
       - name: Build Release
         working-directory: engine
         shell: pwsh
-        run: cmake --build build/win32 --config Release --parallel
+        run: cmake --build build/win32 --config Release --target z_generals --parallel
 
       - name: Package renderer preview
         shell: pwsh
