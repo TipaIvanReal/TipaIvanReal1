@@ -209,8 +209,7 @@ $newSelect = @'
  		//Specify all textures that this shader may need.
 '@
 
-$height = Replace-Required $height $oldSelect $newSelect "terrain pass selection"
-
+$scopeOld = @"\n\tBool doMultiPassWireFrame=FALSE;\n"@\n$scopeNew = @"\n\tBool doMultiPassWireFrame=FALSE;\n\tBool revolutionTerrainMaterial=FALSE;\n"@\n$height = Replace-Required $height $scopeOld $scopeNew "terrain material scope"\n\n$height = Replace-Required $height $oldSelect $newSelect "terrain pass selection"\n
 $oldPass = @'
  			if (m_disableTextures ) {
  				DX8Wrapper::Set_Shader(ShaderClass::_PresetOpaque2DShader);
