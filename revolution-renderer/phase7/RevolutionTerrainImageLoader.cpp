@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -413,7 +415,9 @@ static void MakeCompanionCandidate(
 
     const char *slashA = strrchr(basePath, '/');
     const char *slashB = strrchr(basePath, '\\');
-    const char *slash = slashA > slashB ? slashA : slashB;
+    const char *slash = slashA;
+    if (!slash || (slashB && slashB > slash))
+        slash = slashB;
     const char *dot = strrchr(basePath, '.');
     if (dot && slash && dot < slash)
         dot = nullptr;
