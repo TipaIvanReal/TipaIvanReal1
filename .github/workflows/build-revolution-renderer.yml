@@ -2,11 +2,15 @@ name: Build Revolution modern renderer
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, renderer-dev ]
     paths:
       - "revolution-renderer/**"
       - ".github/workflows/build-revolution-renderer.yml"
   workflow_dispatch:
+
+concurrency:
+  group: revolution-renderer-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
