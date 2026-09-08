@@ -32,6 +32,10 @@ jobs:
         shell: pwsh
         run: .\revolution-renderer\phase1\apply-phase1.ps1
 
+      - name: Apply Revolution renderer Phase 2
+        shell: pwsh
+        run: .\revolution-renderer\phase2\apply-phase2.ps1
+
       - name: Setup MSVC x86
         uses: ilammy/msvc-dev-cmd@v1
         with:
@@ -63,27 +67,28 @@ jobs:
           Copy-Item $zh.FullName -Destination package/generalszh_revolution.exe -Force
 
           @"
-          Revolution Project Modern Renderer - Phase 1
+          Revolution Project Modern Renderer - Phase 2
 
           Run: generalszh_revolution.exe
 
           IMPORTANT:
           Keep third-party d3d8.dll hooks disabled while testing this build.
 
-          Phase 1:
+          Phase 1 + 2:
           - Direct3D 12 device/capability probe is initialized inside the engine.
           - Writes RevolutionRenderer.log next to the executable.
           - Water reflection render target increased from 256 to 1024.
           - Renderer default texture filtering upgraded to anisotropic 16x.
+          - Always-on cinematic color grade and highlight bloom.
           - Legacy WW3D/D3D8 draw path remains active while render calls are migrated.
 
-          This is the first playable bridge build, not the final DX12 renderer.
+          This is a playable bridge build; native DX12 scene rendering is still being migrated.
           "@ | Set-Content package/README.txt -Encoding UTF8
 
           $hash = (Get-FileHash package/generalszh_revolution.exe -Algorithm SHA256).Hash
           "SHA256  generalszh_revolution.exe  $hash" | Set-Content package/SHA256.txt -Encoding ASCII
 
-          Compress-Archive -Path package/* -DestinationPath RevolutionProject-ModernRenderer-Phase1.zip -Force
+          Compress-Archive -Path package/* -DestinationPath RevolutionProject-ModernRenderer-Phase2.zip -Force
 
           Get-Item package/generalszh_revolution.exe, RevolutionProject-ModernRenderer-Phase1.zip |
             Format-Table Name,Length
@@ -91,7 +96,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RevolutionProject-ModernRenderer-Phase1
+          name: RevolutionProject-ModernRenderer-Phase2
           path: RevolutionProject-ModernRenderer-Phase1.zip
           if-no-files-found: error
 
@@ -100,12 +105,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "revolution-renderer-phase1"
-          $asset = "RevolutionProject-ModernRenderer-Phase1.zip"
+          $tag = "revolution-renderer-phase2"
+          $asset = "RevolutionProject-ModernRenderer-Phase2.zip"
 
           gh release view $tag *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag $asset --target "${{ github.sha }}" --title "Revolution Modern Renderer - Phase 1" --notes "Playable bridge build: internal Direct3D 12 capability layer plus 1024px water reflections and 16x anisotropic texture filtering. Legacy WW3D draw calls are still being migrated."
+            gh release create $tag $asset --target "${{ github.sha }}" --title "Revolution Modern Renderer - Phase 2" --notes "Playable bridge build: internal Direct3D 12 capability layer, 1024px water reflections, 16x anisotropic filtering, cinematic color grade and highlight bloom. Native DX12 scene rendering is still being migrated."
           } else {
             gh release upload $tag $asset --clobber
           }
