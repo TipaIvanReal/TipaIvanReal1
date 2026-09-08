@@ -93,7 +93,10 @@ static Bool RevolutionEnsureTerrainPixelShader()
 	{
 		if (errors)
 		{
-			OutputDebugStringA((const char *)errors->GetBufferPointer());
+			const char *assemblerError = (const char *)errors->GetBufferPointer();
+			OutputDebugStringA(assemblerError);
+			if (assemblerError)
+				RevolutionTerrainLog(assemblerError);
 			errors->Release();
 		}
 		if (code)
