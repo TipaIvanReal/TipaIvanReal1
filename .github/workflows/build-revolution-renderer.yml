@@ -40,9 +40,9 @@ jobs:
         shell: pwsh
         run: .\revolution-renderer\phase3\apply-phase3.ps1
 
-      - name: Apply Revolution renderer Phase 4
+      - name: Apply Revolution renderer Phase 4.1
         shell: pwsh
-        run: .\revolution-renderer\phase4\apply-phase4.ps1
+        run: .\revolution-renderer\phase4_1\apply-phase4_1.ps1
 
       - name: Setup MSVC x86
         uses: ilammy/msvc-dev-cmd@v1
@@ -75,7 +75,7 @@ jobs:
           Copy-Item $zh.FullName -Destination package/generalszh_revolution.exe -Force
 
           @"
-          Revolution Project Modern Renderer - Phase 4
+          Revolution Project Modern Renderer - Phase 4.1
 
           Run: generalszh_revolution.exe
 
@@ -100,16 +100,16 @@ jobs:
           $hash = (Get-FileHash package/generalszh_revolution.exe -Algorithm SHA256).Hash
           "SHA256  generalszh_revolution.exe  $hash" | Set-Content package/SHA256.txt -Encoding ASCII
 
-          Compress-Archive -Path package/* -DestinationPath RevolutionProject-ModernRenderer-Phase4.zip -Force
+          Compress-Archive -Path package/* -DestinationPath RevolutionProject-ModernRenderer-Phase4_1.zip -Force
 
-          Get-Item package/generalszh_revolution.exe, RevolutionProject-ModernRenderer-Phase4.zip |
+          Get-Item package/generalszh_revolution.exe, RevolutionProject-ModernRenderer-Phase4_1.zip |
             Format-Table Name,Length
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RevolutionProject-ModernRenderer-Phase4
-          path: RevolutionProject-ModernRenderer-Phase4.zip
+          name: RevolutionProject-ModernRenderer-Phase4_1
+          path: RevolutionProject-ModernRenderer-Phase4_1.zip
           if-no-files-found: error
 
       - name: Publish preview release
@@ -117,12 +117,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "revolution-renderer-phase4"
-          $asset = "RevolutionProject-ModernRenderer-Phase4.zip"
+          $tag = "revolution-renderer-phase4_1"
+          $asset = "RevolutionProject-ModernRenderer-Phase4_1.zip"
 
           gh release view $tag *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag $asset --target "${{ github.sha }}" --title "Revolution Modern Renderer - Phase 4" --notes "Playable bridge build: internal Direct3D 12 capability layer, 1024px water reflections, 16x anisotropic filtering, cinematic color grade and highlight bloom. Native DX12 scene rendering is still being migrated."
+            gh release create $tag $asset --target "${{ github.sha }}" --title "Revolution Modern Renderer - Phase 4.1" --notes "Playable bridge build: internal Direct3D 12 capability layer, 1024px water reflections, 16x anisotropic filtering, cinematic color grade and highlight bloom. Native DX12 scene rendering is still being migrated."
           } else {
             gh release upload $tag $asset --clobber
           }
