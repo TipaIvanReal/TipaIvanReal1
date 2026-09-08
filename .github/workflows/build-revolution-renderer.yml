@@ -74,7 +74,7 @@ jobs:
           - Direct3D 12 device/capability probe is initialized inside the engine.
           - Writes RevolutionRenderer.log next to the executable.
           - Water reflection render target increased from 256 to 1024.
-          - Projected-shadow render target increased from 512 to 2048.
+          - Renderer default texture filtering upgraded to anisotropic 16x.
           - Legacy WW3D/D3D8 draw path remains active while render calls are migrated.
 
           This is the first playable bridge build, not the final DX12 renderer.
@@ -105,7 +105,7 @@ jobs:
 
           gh release view $tag *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag $asset --target "${{ github.sha }}" --title "Revolution Modern Renderer - Phase 1" --notes "Playable bridge build: internal Direct3D 12 capability layer plus upgraded reflection/shadow render targets. Legacy WW3D draw calls are still being migrated."
+            gh release create $tag $asset --target "${{ github.sha }}" --title "Revolution Modern Renderer - Phase 1" --notes "Playable bridge build: internal Direct3D 12 capability layer plus 1024px water reflections and 16x anisotropic texture filtering. Legacy WW3D draw calls are still being migrated."
           } else {
             gh release upload $tag $asset --clobber
           }
