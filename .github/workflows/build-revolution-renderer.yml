@@ -32,21 +32,9 @@ jobs:
         shell: pwsh
         run: .\revolution-renderer\phase1\apply-phase1.ps1
 
-      - name: Apply Revolution renderer Phase 2
+      - name: Apply Revolution renderer Phase 6
         shell: pwsh
-        run: .\revolution-renderer\phase2\apply-phase2.ps1
-
-      - name: Apply Revolution renderer Phase 3
-        shell: pwsh
-        run: .\revolution-renderer\phase3\apply-phase3.ps1
-
-      - name: Apply Revolution renderer Phase 5
-        shell: pwsh
-        run: .\revolution-renderer\phase4\apply-phase4.ps1
-
-      - name: Apply Revolution renderer Phase 5
-        shell: pwsh
-        run: .\revolution-renderer\phase5\apply-phase5.ps1
+        run: .\revolution-renderer\phase6\apply-phase6.ps1
 
       - name: Setup MSVC x86
         uses: ilammy/msvc-dev-cmd@v1
@@ -79,25 +67,20 @@ jobs:
           Copy-Item $zh.FullName -Destination package/generalszh_revolution.exe -Force
 
           @"
-          Revolution Project Modern Renderer - Phase 5
+          Revolution Project Modern Renderer - Phase 6
 
           Run: generalszh_revolution.exe
 
           IMPORTANT:
           Keep third-party d3d8.dll hooks disabled while testing this build.
 
-          Phase 1 + 2 + 3 + 4 + 5:
-          - Direct3D 12 device/capability probe is initialized inside the engine.
-          - Writes RevolutionRenderer.log next to the executable.
-          - Water reflection render target increased from 256 to 1024.
-          - Renderer default texture filtering upgraded to anisotropic 16x.
-          - Always-on cinematic color grade and highlight bloom.
-          - Default tactical view now explicitly runs the cinematic pass every frame.
-          - Stronger directional terrain/object lighting and specular response.
-          - Darker, cooler shadows with filtered projected shadow decals.
-          - More reflective, higher-frequency water response.
-          - Visible key/fill lighting pass applied after map lighting loads.
-          - Legacy WW3D/D3D8 draw path remains active while render calls are migrated.
+          Phase 1 + 6:
+          - Direct3D 12 capability/device probe remains available.
+          - Terrain rendering now installs a programmable material shader at the actual HeightMap draw call.
+          - The terrain atlas is sampled at neighbouring texels to generate procedural micro-normal relief in real time.
+          - Original per-vertex terrain lighting is combined with the new per-pixel relief.
+          - Terrain filtering remains anisotropic 16x.
+          - This build intentionally skips the old Phase 2-5 post-process/lighting experiments.
 
           This is a playable bridge build; native DX12 scene rendering is still being migrated.
           "@ | Set-Content package/README.txt -Encoding UTF8
@@ -105,16 +88,16 @@ jobs:
           $hash = (Get-FileHash package/generalszh_revolution.exe -Algorithm SHA256).Hash
           "SHA256  generalszh_revolution.exe  $hash" | Set-Content package/SHA256.txt -Encoding ASCII
 
-          Compress-Archive -Path package/* -DestinationPath RevolutionProject-ModernRenderer-Phase5.zip -Force
+          Compress-Archive -Path package/* -DestinationPath RevolutionProject-ModernRenderer-Phase6.zip -Force
 
-          Get-Item package/generalszh_revolution.exe, RevolutionProject-ModernRenderer-Phase5.zip |
+          Get-Item package/generalszh_revolution.exe, RevolutionProject-ModernRenderer-Phase6.zip |
             Format-Table Name,Length
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RevolutionProject-ModernRenderer-Phase5
-          path: RevolutionProject-ModernRenderer-Phase5.zip
+          name: RevolutionProject-ModernRenderer-Phase6
+          path: RevolutionProject-ModernRenderer-Phase6.zip
           if-no-files-found: error
 
       - name: Publish preview release
@@ -122,12 +105,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "revolution-renderer-phase5"
-          $asset = "RevolutionProject-ModernRenderer-Phase5.zip"
+          $tag = "revolution-renderer-phase6"
+          $asset = "RevolutionProject-ModernRenderer-Phase6.zip"
 
           gh release view $tag *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag $asset --target "${{ github.sha }}" --title "Revolution Modern Renderer - Phase 5" --notes "Playable bridge build with visibly stronger scene lighting and water response. Native DX12 scene rendering is still being migrated."
+            gh release create $tag $asset --target "${{ github.sha }}" --title "Revolution Modern Renderer - Phase 6" --notes "Playable terrain-shader bridge build: the terrain now uses a programmable material path with procedural relief at the real HeightMap draw call. Native D3D12 scene rendering is still being migrated."
           } else {
             gh release upload $tag $asset --clobber
           }
