@@ -75,11 +75,11 @@ static Bool RevolutionEnsureTerrainPixelShader()
 		"ps.1.1\n"
 		"tex t0\n"
 		"tex t1\n"
-		"tex t2\n"
-		"mul r0, v0, t0\n"
-		"sub r1, t1, t2\n"
-		"mad r0.rgb, r1, c0, r0\n"
-		"mul r0.rgb, r0, c1\n";
+		"sub r1, c0, v0.a\n"
+		"mul r0, t0, r1\n"
+		"mad r0, t1, v0.a, r0\n"
+		"mul r0.rgb, r0, v0\n"
+		"mad_sat r0.rgb, r0, c1, c2\n";
 
 	LPD3DXBUFFER code = nullptr;
 	LPD3DXBUFFER errors = nullptr;
@@ -134,35 +134,20 @@ static Bool RevolutionSetTerrainMaterial(TextureClass *baseTexture)
 	if (FAILED(baseTexture->Peek_D3D_Texture()->GetLevelDesc(0, &desc)) || desc.Width == 0 || desc.Height == 0)
 		return FALSE;
 
-	const float du = 3.0f / (float)desc.Width;
-	const float dv = 3.0f / (float)desc.Height;
-
-	D3DXMATRIX plusOffset;
-	D3DXMATRIX minusOffset;
-	D3DXMatrixIdentity(&plusOffset);
-	D3DXMatrixIdentity(&minusOffset);
-	plusOffset._31 = du;
-	plusOffset._32 = -dv;
-	minusOffset._31 = -du;
-	minusOffset._32 = dv;
-
+	// Generals terrain uses two UV sets into the same atlas and vertex alpha
+	// to blend between the two terrain tiles. Preserve that exact layout.
 	DX8Wrapper::Set_Texture(0, baseTexture);
 	DX8Wrapper::Set_Texture(1, baseTexture);
-	DX8Wrapper::Set_Texture(2, baseTexture);
+	DX8Wrapper::Set_Texture(2, nullptr);
 	DX8Wrapper::Set_Texture(3, nullptr);
 	DX8Wrapper::Apply_Render_State_Changes();
 
 	dev->SetTextureStageState(0, D3DTSS_TEXCOORDINDEX, 0);
-	dev->SetTextureStageState(1, D3DTSS_TEXCOORDINDEX, 0);
-	dev->SetTextureStageState(2, D3DTSS_TEXCOORDINDEX, 0);
-
+	dev->SetTextureStageState(1, D3DTSS_TEXCOORDINDEX, 1);
 	dev->SetTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE);
-	dev->SetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT2);
-	dev->SetTextureStageState(2, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT2);
-	dev->SetTransform(D3DTS_TEXTURE1, &plusOffset);
-	dev->SetTransform(D3DTS_TEXTURE2, &minusOffset);
+	dev->SetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE);
 
-	for (DWORD stage = 0; stage < 3; ++stage)
+	for (DWORD stage = 0; stage < 2; ++stage)
 	{
 		dev->SetTextureStageState(stage, D3DTSS_ADDRESSU, D3DTADDRESS_CLAMP);
 		dev->SetTextureStageState(stage, D3DTSS_ADDRESSV, D3DTADDRESS_CLAMP);
@@ -172,10 +157,11 @@ static Bool RevolutionSetTerrainMaterial(TextureClass *baseTexture)
 		dev->SetTextureStageState(stage, D3DTSS_MAXANISOTROPY, 16);
 	}
 
-	// c0 strongly converts the two shifted samples into visible micro-relief.
-	// c1 gives a slightly warm material response so activation is obvious.
-	dev->SetPixelShaderConstant(0, D3DXVECTOR4(3.25f, 3.25f, 3.25f, 0.0f), 1);
-	dev->SetPixelShaderConstant(1, D3DXVECTOR4(1.18f, 1.06f, 0.92f, 1.0f), 1);
+	// c0 = 1 - blend alpha helper.
+	// c1/c2 = restrained material contrast/tint after the correct atlas blend.
+	dev->SetPixelShaderConstant(0, D3DXVECTOR4(1.0f, 1.0f, 1.0f, 1.0f), 1);
+	dev->SetPixelShaderConstant(1, D3DXVECTOR4(1.10f, 1.07f, 1.02f, 1.0f), 1);
+	dev->SetPixelShaderConstant(2, D3DXVECTOR4(-0.035f, -0.030f, -0.020f, 0.0f), 1);
 
 	if (FAILED(dev->SetPixelShader(g_revolutionTerrainPS)))
 	{
@@ -187,7 +173,7 @@ static Bool RevolutionSetTerrainMaterial(TextureClass *baseTexture)
 	if (!g_revolutionTerrainLogged)
 	{
 		char message[128];
-		sprintf_s(message, "ACTIVE Phase6.3 atlas=%ux%u", (unsigned)desc.Width, (unsigned)desc.Height);
+		sprintf_s(message, "ACTIVE Phase6.4 atlas=%ux%u correct-two-uv-blend", (unsigned)desc.Width, (unsigned)desc.Height);
 		RevolutionTerrainLog(message);
 		g_revolutionTerrainLogged = TRUE;
 	}
@@ -205,6 +191,7 @@ static void RevolutionResetTerrainMaterial()
 	dev->SetTextureStageState(2, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE);
 	dev->SetTexture(1, nullptr);
 	dev->SetTexture(2, nullptr);
+	dev->SetTexture(3, nullptr);
 	DX8Wrapper::Invalidate_Cached_Render_States();
 }
 
@@ -292,4 +279,4 @@ $newReset = @'
 $height = Replace-Required $height $oldReset $newReset "terrain material reset"
 
 Set-Content $heightPath $height -Encoding UTF8
-Write-Host "Revolution renderer Phase 6.3 minimal programmable terrain material applied."
+Write-Host "Revolution renderer Phase 6.4 correct terrain atlas material applied."
