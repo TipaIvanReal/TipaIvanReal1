@@ -76,14 +76,10 @@ static Bool RevolutionEnsureTerrainPixelShader()
 		"tex t0\n"
 		"tex t1\n"
 		"tex t2\n"
-		"dp3 r0.rgb, t1, c0\n"
-		"dp3 r1.rgb, t2, c0\n"
-		"sub r1.rgb, r0, r1\n"
-		"mad_sat r1.rgb, r1, c1, c2\n"
-		"mul r0, t0, r1\n"
-		"mul r0, r0, v0\n"
-		"mul_sat r0.rgb, r0, c3\n"
-		"mad_sat r0.rgb, r1, c4, r0\n";
+		"mul r0, v0, t0\n"
+		"sub r1, t1, t2\n"
+		"mad r0.rgb, r1, c0, r0\n"
+		"mul r0.rgb, r0, c1\n";
 
 	LPD3DXBUFFER code = nullptr;
 	LPD3DXBUFFER errors = nullptr;
@@ -138,8 +134,8 @@ static Bool RevolutionSetTerrainMaterial(TextureClass *baseTexture)
 	if (FAILED(baseTexture->Peek_D3D_Texture()->GetLevelDesc(0, &desc)) || desc.Width == 0 || desc.Height == 0)
 		return FALSE;
 
-	const float du = 2.0f / (float)desc.Width;
-	const float dv = 2.0f / (float)desc.Height;
+	const float du = 3.0f / (float)desc.Width;
+	const float dv = 3.0f / (float)desc.Height;
 
 	D3DXMATRIX plusOffset;
 	D3DXMATRIX minusOffset;
@@ -176,11 +172,10 @@ static Bool RevolutionSetTerrainMaterial(TextureClass *baseTexture)
 		dev->SetTextureStageState(stage, D3DTSS_MAXANISOTROPY, 16);
 	}
 
-	dev->SetPixelShaderConstant(0, D3DXVECTOR4(0.299f, 0.587f, 0.114f, 0.0f), 1);
-	dev->SetPixelShaderConstant(1, D3DXVECTOR4(8.0f, 8.0f, 8.0f, 8.0f), 1);
-	dev->SetPixelShaderConstant(2, D3DXVECTOR4(0.64f, 0.64f, 0.64f, 0.64f), 1);
-	dev->SetPixelShaderConstant(3, D3DXVECTOR4(1.24f, 1.10f, 0.90f, 1.0f), 1);
-	dev->SetPixelShaderConstant(4, D3DXVECTOR4(0.18f, 0.18f, 0.18f, 0.0f), 1);
+	// c0 strongly converts the two shifted samples into visible micro-relief.
+	// c1 gives a slightly warm material response so activation is obvious.
+	dev->SetPixelShaderConstant(0, D3DXVECTOR4(3.25f, 3.25f, 3.25f, 0.0f), 1);
+	dev->SetPixelShaderConstant(1, D3DXVECTOR4(1.18f, 1.06f, 0.92f, 1.0f), 1);
 
 	if (FAILED(dev->SetPixelShader(g_revolutionTerrainPS)))
 	{
@@ -192,7 +187,7 @@ static Bool RevolutionSetTerrainMaterial(TextureClass *baseTexture)
 	if (!g_revolutionTerrainLogged)
 	{
 		char message[128];
-		sprintf_s(message, "ACTIVE atlas=%ux%u", (unsigned)desc.Width, (unsigned)desc.Height);
+		sprintf_s(message, "ACTIVE Phase6.3 atlas=%ux%u", (unsigned)desc.Width, (unsigned)desc.Height);
 		RevolutionTerrainLog(message);
 		g_revolutionTerrainLogged = TRUE;
 	}
@@ -297,4 +292,4 @@ $newReset = @'
 $height = Replace-Required $height $oldReset $newReset "terrain material reset"
 
 Set-Content $heightPath $height -Encoding UTF8
-Write-Host "Revolution renderer Phase 6 programmable terrain material applied."
+Write-Host "Revolution renderer Phase 6.3 minimal programmable terrain material applied."
