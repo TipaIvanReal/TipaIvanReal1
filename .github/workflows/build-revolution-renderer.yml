@@ -90,14 +90,14 @@ jobs:
 
           Compress-Archive -Path package/* -DestinationPath RevolutionProject-ModernRenderer-Phase2.zip -Force
 
-          Get-Item package/generalszh_revolution.exe, RevolutionProject-ModernRenderer-Phase1.zip |
+          Get-Item package/generalszh_revolution.exe, RevolutionProject-ModernRenderer-Phase2.zip |
             Format-Table Name,Length
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: RevolutionProject-ModernRenderer-Phase2
-          path: RevolutionProject-ModernRenderer-Phase1.zip
+          path: RevolutionProject-ModernRenderer-Phase2.zip
           if-no-files-found: error
 
       - name: Publish preview release
