@@ -36,15 +36,19 @@ if ($winMain -notmatch "RevolutionRendererProbe_Initialize\(\)") {
 Set-Content $winMainPath $winMain -Encoding UTF8
 
 # Phase 1 visible quality upgrades on the existing WW3D path.
+# Keep projected-shadow texture sizes unchanged: that system caches one texture per
+# unique model, so brute-force 2K shadows would waste large amounts of VRAM.
 $waterPath = Join-Path $root "Core\GameEngineDevice\Source\W3DDevice\GameClient\Water\W3DWater.cpp"
 $water = Get-Content $waterPath -Raw
 $water = $water -replace '#define SEA_REFLECTION_SIZE 256', '#define SEA_REFLECTION_SIZE 1024'
 Set-Content $waterPath $water -Encoding UTF8
 
-$shadowPath = Join-Path $root "GeneralsMD\Code\GameEngineDevice\Source\W3DDevice\GameClient\Shadow\W3DProjectedShadow.cpp"
-$shadow = Get-Content $shadowPath -Raw
-$shadow = $shadow -replace '#define DEFAULT_RENDER_TARGET_WIDTH\s+512', '#define DEFAULT_RENDER_TARGET_WIDTH            2048'
-$shadow = $shadow -replace '#define DEFAULT_RENDER_TARGET_HEIGHT\s+512', '#define DEFAULT_RENDER_TARGET_HEIGHT           2048'
-Set-Content $shadowPath $shadow -Encoding UTF8
+# Modern GPUs can handle 16x anisotropic filtering essentially for free in this game.
+# Make it the renderer default; user/game settings can still override it later.
+$ww3dPath = Join-Path $root "Core\Libraries\Source\WWVegas\WW3D2\ww3d.cpp"
+$ww3d = Get-Content $ww3dPath -Raw
+$ww3d = $ww3d -replace 'WW3D::TextureFilter = TextureFilterClass::TextureFilterMode::TEXTURE_FILTER_BILINEAR;', 'WW3D::TextureFilter = TextureFilterClass::TextureFilterMode::TEXTURE_FILTER_ANISOTROPIC;'
+$ww3d = $ww3d -replace 'WW3D::AnisotropyLevel = TextureFilterClass::AnisotropicFilterMode::TEXTURE_FILTER_ANISOTROPIC_2X;', 'WW3D::AnisotropyLevel = TextureFilterClass::AnisotropicFilterMode::TEXTURE_FILTER_ANISOTROPIC_16X;'
+Set-Content $ww3dPath $ww3d -Encoding UTF8
 
 Write-Host "Revolution renderer Phase 1 patch applied."
