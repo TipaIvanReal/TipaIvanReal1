@@ -72,7 +72,7 @@ static Bool RevolutionEnsureTerrainPixelShader()
 
 	LPD3DXBUFFER code = nullptr;
 	LPD3DXBUFFER errors = nullptr;
-	HRESULT hr = D3DXAssembleShader(shaderSource, (UINT)strlen(shaderSource), nullptr, nullptr, 0, &code, &errors);
+	HRESULT hr = D3DXAssembleShader(shaderSource, (UINT)strlen(shaderSource), 0, nullptr, &code, &errors);
 
 	if (FAILED(hr) || !code)
 	{
