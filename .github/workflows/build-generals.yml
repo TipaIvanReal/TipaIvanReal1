@@ -34,31 +34,42 @@ jobs:
         shell: pwsh
         run: cmake --build build/win32 --config Release --parallel
 
-      - name: Collect binaries
+      - name: Create game.dat
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path artifact | Out-Null
-          $files = Get-ChildItem -Path engine/build/win32 -Recurse -File |
-            Where-Object { $_.Extension -in '.dat','.exe','.dll','.pdb' }
-          foreach ($f in $files) {
-            Copy-Item $f.FullName -Destination (Join-Path artifact $f.Name) -Force
+
+          $zh = Get-ChildItem -Path engine/build/win32 -Recurse -File -Filter generalszh.exe |
+            Select-Object -First 1
+
+          if (-not $zh) {
+            Write-Error "generalszh.exe was not produced by the build."
+            exit 1
           }
-          Write-Host "Collected:"
-          Get-ChildItem artifact | Format-Table Name,Length
+
+          Copy-Item $zh.FullName -Destination artifact/game.dat -Force
+          Write-Host "Created game.dat from: $($zh.FullName)"
+          Get-Item artifact/game.dat | Format-Table Name,Length,LastWriteTime
 
       - name: Verify game.dat
         shell: pwsh
         run: |
-          $game = Get-ChildItem artifact -Filter game.dat -File -ErrorAction SilentlyContinue
-          if (-not $game) {
-            Write-Error "game.dat was not produced by the build."
+          if (-not (Test-Path artifact/game.dat)) {
+            Write-Error "game.dat was not created."
             exit 1
           }
-          Write-Host "game.dat produced successfully: $($game.FullName)"
 
-      - name: Upload build
+          $size = (Get-Item artifact/game.dat).Length
+          if ($size -lt 1000000) {
+            Write-Error "game.dat looks unexpectedly small: $size bytes"
+            exit 1
+          }
+
+          Write-Host "game.dat verified successfully ($size bytes)."
+
+      - name: Upload game.dat
         uses: actions/upload-artifact@v4
         with:
           name: ZeroHour-game-dat
-          path: artifact/*
+          path: artifact/game.dat
           if-no-files-found: error
