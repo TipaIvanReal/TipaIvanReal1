@@ -1,0 +1,64 @@
+name: Build Zero Hour game.dat
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout build repository
+        uses: actions/checkout@v4
+
+      - name: Clone GeneralsGameCode
+        shell: pwsh
+        run: |
+          git clone --recursive https://github.com/TheSuperHackers/GeneralsGameCode.git engine
+
+      - name: Setup MSVC x86
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86
+
+      - name: Configure
+        working-directory: engine
+        shell: pwsh
+        run: cmake --preset win32
+
+      - name: Build Release
+        working-directory: engine
+        shell: pwsh
+        run: cmake --build build/win32 --config Release --parallel
+
+      - name: Collect binaries
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifact | Out-Null
+          $files = Get-ChildItem -Path engine/build/win32 -Recurse -File |
+            Where-Object { $_.Extension -in '.dat','.exe','.dll','.pdb' }
+          foreach ($f in $files) {
+            Copy-Item $f.FullName -Destination (Join-Path artifact $f.Name) -Force
+          }
+          Write-Host "Collected:"
+          Get-ChildItem artifact | Format-Table Name,Length
+
+      - name: Verify game.dat
+        shell: pwsh
+        run: |
+          $game = Get-ChildItem artifact -Filter game.dat -File -ErrorAction SilentlyContinue
+          if (-not $game) {
+            Write-Error "game.dat was not produced by the build."
+            exit 1
+          }
+          Write-Host "game.dat produced successfully: $($game.FullName)"
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZeroHour-game-dat
+          path: artifact/*
+          if-no-files-found: error
