@@ -1,0 +1,107 @@
+name: Build Revolution modern renderer
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "revolution-renderer/**"
+      - ".github/workflows/build-revolution-renderer.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Clone GeneralsGameCode
+        shell: pwsh
+        run: git clone --recursive https://github.com/TheSuperHackers/GeneralsGameCode.git engine
+
+      - name: Apply Revolution renderer Phase 1
+        shell: pwsh
+        run: .\revolution-renderer\phase1\apply-phase1.ps1
+
+      - name: Setup MSVC x86
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86
+
+      - name: Configure
+        working-directory: engine
+        shell: pwsh
+        run: cmake --preset win32
+
+      - name: Build Release
+        working-directory: engine
+        shell: pwsh
+        run: cmake --build build/win32 --config Release --parallel
+
+      - name: Package renderer preview
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package | Out-Null
+
+          $zh = Get-ChildItem -Path engine/build/win32 -Recurse -File -Filter generalszh.exe |
+            Select-Object -First 1
+
+          if (-not $zh) {
+            Write-Error "generalszh.exe was not produced."
+            exit 1
+          }
+
+          Copy-Item $zh.FullName -Destination package/generalszh_revolution.exe -Force
+
+          @"
+          Revolution Project Modern Renderer - Phase 1
+
+          Run: generalszh_revolution.exe
+
+          IMPORTANT:
+          Keep third-party d3d8.dll hooks disabled while testing this build.
+
+          Phase 1:
+          - Direct3D 12 device/capability probe is initialized inside the engine.
+          - Writes RevolutionRenderer.log next to the executable.
+          - Water reflection render target increased from 256 to 1024.
+          - Projected-shadow render target increased from 512 to 2048.
+          - Legacy WW3D/D3D8 draw path remains active while render calls are migrated.
+
+          This is the first playable bridge build, not the final DX12 renderer.
+          "@ | Set-Content package/README.txt -Encoding UTF8
+
+          $hash = (Get-FileHash package/generalszh_revolution.exe -Algorithm SHA256).Hash
+          "SHA256  generalszh_revolution.exe  $hash" | Set-Content package/SHA256.txt -Encoding ASCII
+
+          Compress-Archive -Path package/* -DestinationPath RevolutionProject-ModernRenderer-Phase1.zip -Force
+
+          Get-Item package/generalszh_revolution.exe, RevolutionProject-ModernRenderer-Phase1.zip |
+            Format-Table Name,Length
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RevolutionProject-ModernRenderer-Phase1
+          path: RevolutionProject-ModernRenderer-Phase1.zip
+          if-no-files-found: error
+
+      - name: Publish preview release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "revolution-renderer-phase1"
+          $asset = "RevolutionProject-ModernRenderer-Phase1.zip"
+
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag $asset --target "${{ github.sha }}" --title "Revolution Modern Renderer - Phase 1" --notes "Playable bridge build: internal Direct3D 12 capability layer plus upgraded reflection/shadow render targets. Legacy WW3D draw calls are still being migrated."
+          } else {
+            gh release upload $tag $asset --clobber
+          }
