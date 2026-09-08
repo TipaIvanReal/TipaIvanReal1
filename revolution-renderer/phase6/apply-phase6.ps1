@@ -18,6 +18,7 @@ $oldInclude = @'
 $newInclude = @'
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 '@
 $height = Replace-Required $height $oldInclude $newInclude "HeightMap includes"
 
@@ -39,6 +40,17 @@ static ShaderClass detailOpaqueShader(SC_DETAIL_BLEND);
 // -----------------------------------------------------------------------------
 static DWORD g_revolutionTerrainPS = 0;
 static IDirect3DDevice8 *g_revolutionTerrainPSDevice = nullptr;
+static Bool g_revolutionTerrainLogged = FALSE;
+
+static void RevolutionTerrainLog(const char *message)
+{
+	FILE *log = nullptr;
+	if (fopen_s(&log, "RevolutionRenderer.log", "a") == 0 && log)
+	{
+		fprintf(log, "RevolutionTerrainShader: %s\n", message);
+		fclose(log);
+	}
+}
 
 static Bool RevolutionEnsureTerrainPixelShader()
 {
@@ -68,7 +80,7 @@ static Bool RevolutionEnsureTerrainPixelShader()
 		"mul r0, t0, r1\n"
 		"mul r0, r0, v0\n"
 		"mul_sat r0.rgb, r0, c3\n"
-		"mov r0.a, t0\n";
+		"mad_sat r0.rgb, r1, c4, r0\n";
 
 	LPD3DXBUFFER code = nullptr;
 	LPD3DXBUFFER errors = nullptr;
@@ -83,6 +95,7 @@ static Bool RevolutionEnsureTerrainPixelShader()
 		}
 		if (code)
 			code->Release();
+		RevolutionTerrainLog("assembly failed");
 		return FALSE;
 	}
 
@@ -93,7 +106,10 @@ static Bool RevolutionEnsureTerrainPixelShader()
 		errors->Release();
 
 	if (FAILED(hr) || !handle)
+	{
+		RevolutionTerrainLog("CreatePixelShader failed");
 		return FALSE;
+	}
 
 	g_revolutionTerrainPS = handle;
 	g_revolutionTerrainPSDevice = dev;
@@ -154,14 +170,24 @@ static Bool RevolutionSetTerrainMaterial(TextureClass *baseTexture)
 	}
 
 	dev->SetPixelShaderConstant(0, D3DXVECTOR4(0.299f, 0.587f, 0.114f, 0.0f), 1);
-	dev->SetPixelShaderConstant(1, D3DXVECTOR4(5.5f, 5.5f, 5.5f, 5.5f), 1);
-	dev->SetPixelShaderConstant(2, D3DXVECTOR4(0.78f, 0.78f, 0.78f, 0.78f), 1);
-	dev->SetPixelShaderConstant(3, D3DXVECTOR4(1.18f, 1.07f, 0.94f, 1.0f), 1);
+	dev->SetPixelShaderConstant(1, D3DXVECTOR4(8.0f, 8.0f, 8.0f, 8.0f), 1);
+	dev->SetPixelShaderConstant(2, D3DXVECTOR4(0.64f, 0.64f, 0.64f, 0.64f), 1);
+	dev->SetPixelShaderConstant(3, D3DXVECTOR4(1.24f, 1.10f, 0.90f, 1.0f), 1);
+	dev->SetPixelShaderConstant(4, D3DXVECTOR4(0.18f, 0.18f, 0.18f, 0.0f), 1);
 
 	if (FAILED(dev->SetPixelShader(g_revolutionTerrainPS)))
 	{
 		g_revolutionTerrainPS = 0;
+		RevolutionTerrainLog("SetPixelShader failed");
 		return FALSE;
+	}
+
+	if (!g_revolutionTerrainLogged)
+	{
+		char message[128];
+		sprintf_s(message, "ACTIVE atlas=%ux%u", (unsigned)desc.Width, (unsigned)desc.Height);
+		RevolutionTerrainLog(message);
+		g_revolutionTerrainLogged = TRUE;
 	}
 	return TRUE;
 }
