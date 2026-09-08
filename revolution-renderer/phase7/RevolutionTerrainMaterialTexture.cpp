@@ -1,5 +1,6 @@
 #include "W3DDevice/GameClient/RevolutionTerrainMaterialTexture.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 
