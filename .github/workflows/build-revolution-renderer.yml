@@ -36,7 +36,7 @@ jobs:
         shell: pwsh
         run: .\revolution-renderer\phase2\apply-phase2.ps1
 
-      - name: Apply Revolution renderer Phase 4
+      - name: Apply Revolution renderer Phase 3
         shell: pwsh
         run: .\revolution-renderer\phase3\apply-phase3.ps1
 
