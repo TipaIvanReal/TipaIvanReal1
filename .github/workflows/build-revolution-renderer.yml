@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: revolution-renderer-${{ github.ref }}
+  group: revolution-renderer-${{ github.sha }}
   cancel-in-progress: true
 
 permissions:
